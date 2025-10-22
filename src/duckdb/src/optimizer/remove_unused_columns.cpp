@@ -216,11 +216,16 @@ void RemoveUnusedColumns::VisitOperator(LogicalOperator &op) {
 		remove.VisitOperator(*op.children[0]);
 		return;
 	}
-	case LogicalOperatorType::LOGICAL_GET:
+	case LogicalOperatorType::LOGICAL_GET: {
 		LogicalOperatorVisitor::VisitOperatorExpressions(op);
+		auto &get = op.Cast<LogicalGet>();
 		if (!everything_referenced) {
-			auto &get = op.Cast<LogicalGet>();
 			if (!get.function.projection_pushdown) {
+				if (get.function.in_out_function && !op.children.empty()) {
+					RemoveUnusedColumns remove(binder, context, true);
+					remove.VisitOperatorExpressions(op);
+					remove.VisitOperator(*op.children[0]);
+				}
 				return;
 			}
 
@@ -300,7 +305,13 @@ void RemoveUnusedColumns::VisitOperator(LogicalOperator &op) {
 				}
 			}
 		}
+		if (get.function.in_out_function && !op.children.empty()) {
+			RemoveUnusedColumns remove(binder, context, true);
+			remove.VisitOperatorExpressions(op);
+			remove.VisitOperator(*op.children[0]);
+		}
 		return;
+	}
 	case LogicalOperatorType::LOGICAL_DISTINCT: {
 		auto &distinct = op.Cast<LogicalDistinct>();
 		if (distinct.distinct_type == DistinctType::DISTINCT_ON) {
