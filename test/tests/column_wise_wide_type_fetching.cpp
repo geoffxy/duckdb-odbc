@@ -164,3 +164,54 @@ TEST_CASE("Test column-wise fetch of TIME array binding", "[odbc]") {
     EXECUTE_AND_CHECK("SQLFreeHandle (HSTMT)", hstmt, SQLFreeHandle, SQL_HANDLE_STMT, hstmt);
     DISCONNECT_FROM_DATABASE(env, dbc);
 }
+
+TEST_CASE("Test column-wise fetch of INTERVAL MONTH array binding", "[odbc]") {
+    SQLHANDLE env;
+    SQLHANDLE dbc;
+    HSTMT hstmt = SQL_NULL_HSTMT;
+
+    CONNECT_TO_DATABASE(env, dbc);
+    EXECUTE_AND_CHECK("SQLAllocHandle (HSTMT)", hstmt, SQLAllocHandle, SQL_HANDLE_STMT, dbc, &hstmt);
+
+    EXECUTE_AND_CHECK("SQLExecDirect", hstmt, SQLExecDirect, hstmt,
+                      ConvertToSQLCHAR("DROP TABLE IF EXISTS interval_col_test"), SQL_NTS);
+    EXECUTE_AND_CHECK("SQLExecDirect", hstmt, SQLExecDirect, hstmt,
+                      ConvertToSQLCHAR("CREATE TABLE interval_col_test (col1 INTERVAL)"), SQL_NTS);
+
+    const int ROWS = 12;
+    SQL_INTERVAL_STRUCT interval_array[ROWS];
+    SQLLEN interval_ind[ROWS];
+    SQLUSMALLINT row_array_status[ROWS];
+    SQLULEN rows_fetched = 0;
+
+    EXECUTE_AND_CHECK("SQLSetStmtAttr (SQL_ATTR_ROW_ARRAY_SIZE)", hstmt, SQLSetStmtAttr, hstmt, SQL_ATTR_ROW_ARRAY_SIZE,
+                      reinterpret_cast<SQLPOINTER>(ROWS), 0);
+    EXECUTE_AND_CHECK("SQLSetStmtAttr (SQL_ATTR_ROW_STATUS_PTR)", hstmt, SQLSetStmtAttr, hstmt, SQL_ATTR_ROW_STATUS_PTR,
+                      row_array_status, 0);
+    EXECUTE_AND_CHECK("SQLSetStmtAttr (SQL_ATTR_ROWS_FETCHED_PTR)", hstmt, SQLSetStmtAttr, hstmt,
+                      SQL_ATTR_ROWS_FETCHED_PTR, &rows_fetched, 0);
+
+    // bind as SQL_C_INTERVAL_MONTH (driver will set interval_type)
+    EXECUTE_AND_CHECK("SQLBindCol (INTERVAL)", hstmt, SQLBindCol, hstmt, 1, SQL_C_INTERVAL_MONTH, interval_array,
+                      sizeof(interval_array[0]), interval_ind);
+
+    // select generated intervals without inserting data
+    EXECUTE_AND_CHECK("SQLExecDirect (SELECT)", hstmt, SQLExecDirect, hstmt,
+                      ConvertToSQLCHAR("SELECT INTERVAL (i) MONTH FROM range(12) t(i)"), SQL_NTS);
+    EXECUTE_AND_CHECK("SQLFetchScroll", hstmt, SQLFetchScroll, hstmt, SQL_FETCH_NEXT, 0);
+
+    REQUIRE(rows_fetched == ROWS);
+    for (int i = 0; i < ROWS; ++i) {
+        if (row_array_status[i] == SQL_ROW_SUCCESS || row_array_status[i] == SQL_ROW_SUCCESS_WITH_INFO) {
+            REQUIRE(interval_ind[i] != SQL_NO_DATA);
+            // interval_type for MONTH should be SQL_IS_MONTH
+            REQUIRE(interval_array[i].interval_type == SQL_IS_MONTH);
+            // the month value should equal i
+            REQUIRE(interval_array[i].intval.year_month.month == i);
+        }
+    }
+
+    EXECUTE_AND_CHECK("SQLFreeStmt (HSTMT)", hstmt, SQLFreeStmt, hstmt, SQL_CLOSE);
+    EXECUTE_AND_CHECK("SQLFreeHandle (HSTMT)", hstmt, SQLFreeHandle, SQL_HANDLE_STMT, hstmt);
+    DISCONNECT_FROM_DATABASE(env, dbc);
+}
