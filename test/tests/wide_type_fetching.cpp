@@ -8,8 +8,6 @@ using namespace odbc_test;
 // ROW-WISE BINDING TESTS
 // ============================================================================
 
-/*
-
 TEST_CASE("Test row-wise fetch of TIMESTAMP array binding", "[odbc]") {
     SQLHANDLE env;
     SQLHANDLE dbc;
@@ -29,8 +27,8 @@ TEST_CASE("Test row-wise fetch of TIMESTAMP array binding", "[odbc]") {
         EXECUTE_AND_CHECK("SQLExecDirect (INSERT)", hstmt, SQLExecDirect, hstmt, ConvertToSQLCHAR(buf), SQL_NTS);
     }
 
+    SQLLEN ts_ind[ROW_ARRAY_SIZE * 2];
     SQL_TIMESTAMP_STRUCT ts_array[ROW_ARRAY_SIZE];
-    SQLLEN ts_ind[ROW_ARRAY_SIZE];
     SQLUSMALLINT row_array_status[ROW_ARRAY_SIZE];
     SQLULEN rows_fetched = 0;
 
@@ -175,7 +173,6 @@ TEST_CASE("Test row-wise fetch of TIME array binding", "[odbc]") {
     EXECUTE_AND_CHECK("SQLFreeHandle (HSTMT)", hstmt, SQLFreeHandle, SQL_HANDLE_STMT, hstmt);
     DISCONNECT_FROM_DATABASE(env, dbc);
 }
-*/
 
 // ============================================================================
 // COLUMN-WISE BINDING TESTS
