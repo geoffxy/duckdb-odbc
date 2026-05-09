@@ -19,7 +19,7 @@ TEST_CASE("Test column-wise fetch of TIMESTAMP array binding", "[odbc]") {
 
     for (int i = 0; i < ROW_ARRAY_SIZE; ++i) {
         char buf[128];
-        snprintf(buf, sizeof(buf), "INSERT INTO ts_col_test VALUES ('2000-01-01 00:00:%02d')", i);
+        snprintf(buf, sizeof(buf), "INSERT INTO ts_col_test VALUES ('2026-05-01 00:00:%02d')", i);
         EXECUTE_AND_CHECK("SQLExecDirect (INSERT)", hstmt, SQLExecDirect, hstmt, ConvertToSQLCHAR(buf), SQL_NTS);
     }
 
@@ -28,7 +28,10 @@ TEST_CASE("Test column-wise fetch of TIMESTAMP array binding", "[odbc]") {
     SQLUSMALLINT row_array_status[ROW_ARRAY_SIZE];
     SQLULEN rows_fetched = 0;
 
-    // Column-wise: SQL_BIND_BY_COLUMN (default)
+    memset(ts_array, 0, sizeof(SQL_TIMESTAMP_STRUCT) * ROW_ARRAY_SIZE);
+    memset(ts_ind, 0, sizeof(SQLLEN) * ROW_ARRAY_SIZE);
+    memset(row_array_status, 0, sizeof(SQLUSMALLINT) * ROW_ARRAY_SIZE);
+
     EXECUTE_AND_CHECK("SQLSetStmtAttr (SQL_ATTR_ROW_ARRAY_SIZE)", hstmt, SQLSetStmtAttr, hstmt, SQL_ATTR_ROW_ARRAY_SIZE,
                       reinterpret_cast<SQLPOINTER>(ROW_ARRAY_SIZE), 0);
     EXECUTE_AND_CHECK("SQLSetStmtAttr (SQL_ATTR_ROW_STATUS_PTR)", hstmt, SQLSetStmtAttr, hstmt, SQL_ATTR_ROW_STATUS_PTR,
@@ -44,11 +47,13 @@ TEST_CASE("Test column-wise fetch of TIMESTAMP array binding", "[odbc]") {
     EXECUTE_AND_CHECK("SQLFetchScroll", hstmt, SQLFetchScroll, hstmt, SQL_FETCH_NEXT, 0);
 
     REQUIRE(rows_fetched == ROW_ARRAY_SIZE);
+
+    // Verify that we get back 2026-05-01 00:00:00, 2026-05-01 00:00:01, ..., 2026-05-01 00:00:04.
     for (int i = 0; i < (int)rows_fetched; ++i) {
         if (row_array_status[i] == SQL_ROW_SUCCESS || row_array_status[i] == SQL_ROW_SUCCESS_WITH_INFO) {
             REQUIRE(ts_ind[i] != SQL_NO_DATA);
-            REQUIRE(ts_array[i].year == 2000);
-            REQUIRE(ts_array[i].month == 1);
+            REQUIRE(ts_array[i].year == 2026);
+            REQUIRE(ts_array[i].month == 5);
             REQUIRE(ts_array[i].day == 1);
             REQUIRE(ts_array[i].second == i);
         }
@@ -74,7 +79,7 @@ TEST_CASE("Test column-wise fetch of DATE array binding", "[odbc]") {
 
     for (int i = 0; i < ROW_ARRAY_SIZE; ++i) {
         char buf[128];
-        snprintf(buf, sizeof(buf), "INSERT INTO date_col_test VALUES ('2000-01-%02d')", i + 1);
+        snprintf(buf, sizeof(buf), "INSERT INTO date_col_test VALUES ('2026-05-%02d')", i + 1);
         EXECUTE_AND_CHECK("SQLExecDirect (INSERT)", hstmt, SQLExecDirect, hstmt, ConvertToSQLCHAR(buf), SQL_NTS);
     }
 
@@ -82,6 +87,10 @@ TEST_CASE("Test column-wise fetch of DATE array binding", "[odbc]") {
     SQLLEN date_ind[ROW_ARRAY_SIZE];
     SQLUSMALLINT row_array_status[ROW_ARRAY_SIZE];
     SQLULEN rows_fetched = 0;
+
+    memset(date_array, 0, sizeof(SQL_DATE_STRUCT) * ROW_ARRAY_SIZE);
+    memset(date_ind, 0, sizeof(SQLLEN) * ROW_ARRAY_SIZE);
+    memset(row_array_status, 0, sizeof(SQLUSMALLINT) * ROW_ARRAY_SIZE);
 
     EXECUTE_AND_CHECK("SQLSetStmtAttr (SQL_ATTR_ROW_ARRAY_SIZE)", hstmt, SQLSetStmtAttr, hstmt, SQL_ATTR_ROW_ARRAY_SIZE,
                       reinterpret_cast<SQLPOINTER>(ROW_ARRAY_SIZE), 0);
@@ -98,11 +107,12 @@ TEST_CASE("Test column-wise fetch of DATE array binding", "[odbc]") {
     EXECUTE_AND_CHECK("SQLFetchScroll", hstmt, SQLFetchScroll, hstmt, SQL_FETCH_NEXT, 0);
 
     REQUIRE(rows_fetched == ROW_ARRAY_SIZE);
+    // Verify that we get back 2026-05-01, 2026-05-02, ..., 2026-05-05.
     for (int i = 0; i < (int)rows_fetched; ++i) {
         if (row_array_status[i] == SQL_ROW_SUCCESS || row_array_status[i] == SQL_ROW_SUCCESS_WITH_INFO) {
             REQUIRE(date_ind[i] != SQL_NO_DATA);
-            REQUIRE(date_array[i].year == 2000);
-            REQUIRE(date_array[i].month == 1);
+            REQUIRE(date_array[i].year == 2026);
+            REQUIRE(date_array[i].month == 5);
             REQUIRE(date_array[i].day == i + 1);
         }
     }
@@ -136,6 +146,10 @@ TEST_CASE("Test column-wise fetch of TIME array binding", "[odbc]") {
     SQLUSMALLINT row_array_status[ROW_ARRAY_SIZE];
     SQLULEN rows_fetched = 0;
 
+    memset(time_array, 0, sizeof(SQL_TIME_STRUCT) * ROW_ARRAY_SIZE);
+    memset(time_ind, 0, sizeof(SQLLEN) * ROW_ARRAY_SIZE);
+    memset(row_array_status, 0, sizeof(SQLUSMALLINT) * ROW_ARRAY_SIZE);
+
     EXECUTE_AND_CHECK("SQLSetStmtAttr (SQL_ATTR_ROW_ARRAY_SIZE)", hstmt, SQLSetStmtAttr, hstmt, SQL_ATTR_ROW_ARRAY_SIZE,
                       reinterpret_cast<SQLPOINTER>(ROW_ARRAY_SIZE), 0);
     EXECUTE_AND_CHECK("SQLSetStmtAttr (SQL_ATTR_ROW_STATUS_PTR)", hstmt, SQLSetStmtAttr, hstmt, SQL_ATTR_ROW_STATUS_PTR,
@@ -151,6 +165,7 @@ TEST_CASE("Test column-wise fetch of TIME array binding", "[odbc]") {
     EXECUTE_AND_CHECK("SQLFetchScroll", hstmt, SQLFetchScroll, hstmt, SQL_FETCH_NEXT, 0);
 
     REQUIRE(rows_fetched == ROW_ARRAY_SIZE);
+    // Verify that we get back 00:00:00, 00:00:01, ..., 00:00:04.
     for (int i = 0; i < (int)rows_fetched; ++i) {
         if (row_array_status[i] == SQL_ROW_SUCCESS || row_array_status[i] == SQL_ROW_SUCCESS_WITH_INFO) {
             REQUIRE(time_ind[i] != SQL_NO_DATA);
@@ -173,16 +188,15 @@ TEST_CASE("Test column-wise fetch of INTERVAL MONTH array binding", "[odbc]") {
     CONNECT_TO_DATABASE(env, dbc);
     EXECUTE_AND_CHECK("SQLAllocHandle (HSTMT)", hstmt, SQLAllocHandle, SQL_HANDLE_STMT, dbc, &hstmt);
 
-    EXECUTE_AND_CHECK("SQLExecDirect", hstmt, SQLExecDirect, hstmt,
-                      ConvertToSQLCHAR("DROP TABLE IF EXISTS interval_col_test"), SQL_NTS);
-    EXECUTE_AND_CHECK("SQLExecDirect", hstmt, SQLExecDirect, hstmt,
-                      ConvertToSQLCHAR("CREATE TABLE interval_col_test (col1 INTERVAL)"), SQL_NTS);
-
     const int ROWS = 12;
     SQL_INTERVAL_STRUCT interval_array[ROWS];
     SQLLEN interval_ind[ROWS];
     SQLUSMALLINT row_array_status[ROWS];
     SQLULEN rows_fetched = 0;
+
+    memset(interval_array, 0, sizeof(SQL_INTERVAL_STRUCT) * ROWS);
+    memset(interval_ind, 0, sizeof(SQLLEN) * ROWS);
+    memset(row_array_status, 0, sizeof(SQLUSMALLINT) * ROWS);
 
     EXECUTE_AND_CHECK("SQLSetStmtAttr (SQL_ATTR_ROW_ARRAY_SIZE)", hstmt, SQLSetStmtAttr, hstmt, SQL_ATTR_ROW_ARRAY_SIZE,
                       reinterpret_cast<SQLPOINTER>(ROWS), 0);
@@ -191,11 +205,10 @@ TEST_CASE("Test column-wise fetch of INTERVAL MONTH array binding", "[odbc]") {
     EXECUTE_AND_CHECK("SQLSetStmtAttr (SQL_ATTR_ROWS_FETCHED_PTR)", hstmt, SQLSetStmtAttr, hstmt,
                       SQL_ATTR_ROWS_FETCHED_PTR, &rows_fetched, 0);
 
-    // bind as SQL_C_INTERVAL_MONTH (driver will set interval_type)
     EXECUTE_AND_CHECK("SQLBindCol (INTERVAL)", hstmt, SQLBindCol, hstmt, 1, SQL_C_INTERVAL_MONTH, interval_array,
                       sizeof(interval_array[0]), interval_ind);
 
-    // select generated intervals without inserting data
+    // Should return 12 rows with INTERVAL MONTH values of 0, 1, ..., 11.
     EXECUTE_AND_CHECK("SQLExecDirect (SELECT)", hstmt, SQLExecDirect, hstmt,
                       ConvertToSQLCHAR("SELECT INTERVAL (i) MONTH FROM range(12) t(i)"), SQL_NTS);
     EXECUTE_AND_CHECK("SQLFetchScroll", hstmt, SQLFetchScroll, hstmt, SQL_FETCH_NEXT, 0);
@@ -204,10 +217,62 @@ TEST_CASE("Test column-wise fetch of INTERVAL MONTH array binding", "[odbc]") {
     for (int i = 0; i < ROWS; ++i) {
         if (row_array_status[i] == SQL_ROW_SUCCESS || row_array_status[i] == SQL_ROW_SUCCESS_WITH_INFO) {
             REQUIRE(interval_ind[i] != SQL_NO_DATA);
-            // interval_type for MONTH should be SQL_IS_MONTH
+            // interval_type should be SQL_IS_MONTH
             REQUIRE(interval_array[i].interval_type == SQL_IS_MONTH);
-            // the month value should equal i
+            REQUIRE(interval_array[i].intval.year_month.year == 0);
             REQUIRE(interval_array[i].intval.year_month.month == i);
+        }
+    }
+
+    EXECUTE_AND_CHECK("SQLFreeStmt (HSTMT)", hstmt, SQLFreeStmt, hstmt, SQL_CLOSE);
+    EXECUTE_AND_CHECK("SQLFreeHandle (HSTMT)", hstmt, SQLFreeHandle, SQL_HANDLE_STMT, hstmt);
+    DISCONNECT_FROM_DATABASE(env, dbc);
+}
+
+TEST_CASE("Test column-wise fetch of INTERVAL MINUTES array binding", "[odbc]") {
+    SQLHANDLE env;
+    SQLHANDLE dbc;
+    HSTMT hstmt = SQL_NULL_HSTMT;
+
+    CONNECT_TO_DATABASE(env, dbc);
+    EXECUTE_AND_CHECK("SQLAllocHandle (HSTMT)", hstmt, SQLAllocHandle, SQL_HANDLE_STMT, dbc, &hstmt);
+
+    const int ROWS = 10;
+    SQL_INTERVAL_STRUCT interval_array[ROWS];
+    SQLLEN interval_ind[ROWS];
+    SQLUSMALLINT row_array_status[ROWS];
+    SQLULEN rows_fetched = 0;
+
+    memset(interval_array, 0, sizeof(SQL_INTERVAL_STRUCT) * ROWS);
+    memset(interval_ind, 0, sizeof(SQLLEN) * ROWS);
+    memset(row_array_status, 0, sizeof(SQLUSMALLINT) * ROWS);
+
+    EXECUTE_AND_CHECK("SQLSetStmtAttr (SQL_ATTR_ROW_ARRAY_SIZE)", hstmt, SQLSetStmtAttr, hstmt, SQL_ATTR_ROW_ARRAY_SIZE,
+                      reinterpret_cast<SQLPOINTER>(ROWS), 0);
+    EXECUTE_AND_CHECK("SQLSetStmtAttr (SQL_ATTR_ROW_STATUS_PTR)", hstmt, SQLSetStmtAttr, hstmt, SQL_ATTR_ROW_STATUS_PTR,
+                      row_array_status, 0);
+    EXECUTE_AND_CHECK("SQLSetStmtAttr (SQL_ATTR_ROWS_FETCHED_PTR)", hstmt, SQLSetStmtAttr, hstmt,
+                      SQL_ATTR_ROWS_FETCHED_PTR, &rows_fetched, 0);
+
+    EXECUTE_AND_CHECK("SQLBindCol (INTERVAL)", hstmt, SQLBindCol, hstmt, 1, SQL_C_INTERVAL_MINUTE, interval_array,
+                      sizeof(interval_array[0]), interval_ind);
+
+    // Should return 10 rows with INTERVAL MINUTES values of 0, 1, ..., 9.
+    EXECUTE_AND_CHECK("SQLExecDirect (SELECT)", hstmt, SQLExecDirect, hstmt,
+                      ConvertToSQLCHAR("SELECT INTERVAL (i) MINUTES FROM range(10) t(i)"), SQL_NTS);
+    EXECUTE_AND_CHECK("SQLFetchScroll", hstmt, SQLFetchScroll, hstmt, SQL_FETCH_NEXT, 0);
+
+    REQUIRE(rows_fetched == ROWS);
+    for (int i = 0; i < ROWS; ++i) {
+        if (row_array_status[i] == SQL_ROW_SUCCESS || row_array_status[i] == SQL_ROW_SUCCESS_WITH_INFO) {
+            REQUIRE(interval_ind[i] != SQL_NO_DATA);
+            // interval_type should be SQL_IS_MINUTE
+            REQUIRE(interval_array[i].interval_type == SQL_IS_MINUTE);
+            REQUIRE(interval_array[i].intval.day_second.minute == i);
+            REQUIRE(interval_array[i].intval.day_second.hour == 0);
+            REQUIRE(interval_array[i].intval.day_second.day == 0);
+            REQUIRE(interval_array[i].intval.day_second.second == 0);
+            REQUIRE(interval_array[i].intval.day_second.fraction == 0);
         }
     }
 
