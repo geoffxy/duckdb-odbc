@@ -38,6 +38,7 @@ add_executable(
   tests/test_unbound_params.cpp
   tests/test_widechar_conv.cpp
   tests/test_widechar_data.cpp
+  tests/wide_type_fetching.cpp
   tests/col_attribute/col_attribute.cpp
   tests/col_attribute/char_query.cpp
   tests/col_attribute/decimal_query.cpp
