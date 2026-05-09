@@ -14,6 +14,7 @@ add_executable(
   tests/bind_col.cpp
   tests/bools_as_char.cpp
   tests/catalog_functions.cpp
+  tests/column_wise_wide_type_fetching.cpp
   tests/diagnostics.cpp
   tests/extension.cpp
   tests/row_wise_fetching.cpp
@@ -38,7 +39,6 @@ add_executable(
   tests/test_unbound_params.cpp
   tests/test_widechar_conv.cpp
   tests/test_widechar_data.cpp
-  tests/wide_type_fetching.cpp
   tests/col_attribute/col_attribute.cpp
   tests/col_attribute/char_query.cpp
   tests/col_attribute/decimal_query.cpp
